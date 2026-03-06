@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import tempfile
 import urllib.request
+import requests
 import folium
 from streamlit_folium import st_folium
 import rasterio
@@ -108,28 +109,35 @@ ARCHIVOS_REMOTOS = {
     "DA_CAMAS.tif":        f"{HF_BASE}/DA_CAMAS.tif",
 }
 
-@st.cache_data(show_spinner="Descargando datos...")
+@st.cache_data(show_spinner=False)
 def obtener_ruta_archivo(nombre):
     """
     Si el archivo existe localmente (modo local/dev) lo usa directo.
-    Si no, lo descarga desde OneDrive a una carpeta temporal (modo cloud).
+    Si no, lo descarga desde Hugging Face con streaming.
     """
     # Modo local — archivo en la misma carpeta que app.py
     if os.path.exists(nombre):
         return nombre
 
-    # Modo cloud — descargar desde OneDrive
+    # Modo cloud — descargar desde Hugging Face
     url = ARCHIVOS_REMOTOS.get(nombre)
     if not url:
         raise FileNotFoundError(
-            f"'{nombre}' no encontrado localmente y sin URL configurada en ARCHIVOS_ONEDRIVE.")
+            f"'{nombre}' no encontrado localmente y sin URL configurada.")
 
-    # Guardar en carpeta temporal del sistema
     tmp_dir  = tempfile.gettempdir()
     tmp_path = os.path.join(tmp_dir, nombre)
 
     if not os.path.exists(tmp_path):
-        urllib.request.urlretrieve(url, tmp_path)
+        # Streaming con requests — más robusto para archivos grandes
+        response = requests.get(url, stream=True, timeout=300)
+        response.raise_for_status()
+        tmp_path_partial = tmp_path + ".part"
+        with open(tmp_path_partial, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8 * 1024 * 1024):
+                if chunk:
+                    f.write(chunk)
+        os.rename(tmp_path_partial, tmp_path)
 
     return tmp_path
 
