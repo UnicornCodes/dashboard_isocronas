@@ -109,7 +109,6 @@ ARCHIVOS_REMOTOS = {
     "DA_CAMAS.tif":        f"{HF_BASE}/DA_CAMAS.tif",
 }
 
-@st.cache_data(show_spinner=False)
 def obtener_ruta_archivo(nombre):
     """
     Si el archivo existe localmente (modo local/dev) lo usa directo.
