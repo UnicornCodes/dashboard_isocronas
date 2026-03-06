@@ -129,7 +129,6 @@ def obtener_ruta_archivo(nombre):
     tmp_path = os.path.join(tmp_dir, nombre)
 
     if not os.path.exists(tmp_path):
-        st.toast(f"⬇️ Descargando {nombre}...", icon="📦")
         urllib.request.urlretrieve(url, tmp_path)
 
     return tmp_path
@@ -520,7 +519,7 @@ with st.sidebar:
 
     # --- MAPA BASE ---
     st.markdown("### 🗺️ Mapa base")
-    basemap = st.selectbox("", ["CartoDB positron","OpenStreetMap","CartoDB dark_matter"])
+    basemap = st.selectbox("Selecciona mapa base", ["CartoDB positron","OpenStreetMap","CartoDB dark_matter"], label_visibility="collapsed")
 
     st.markdown('<div class="separator"></div>', unsafe_allow_html=True)
 
@@ -657,7 +656,7 @@ if mostrar_pna and len(gdf_filtrado) > 0:
     agregar_puntos_pna(m, gdf_filtrado, usar_cluster)
 
 folium.LayerControl(collapsed=False).add_to(m)
-st_folium(m, use_container_width=True, height=600, key="mapa_principal")
+st_folium(m, width="stretch", height=600, key="mapa_principal")
 
 st.markdown("---")
 
@@ -674,7 +673,7 @@ with cr:
     df_t = df_dist.copy()
     df_t['Porcentaje'] = df_t['Porcentaje'].apply(lambda x: f"{x:.1f}%")
     df_t['Pixeles'] = df_t['Pixeles'].apply(lambda x: f"{x:,}")
-    st.dataframe(df_t[['Emoji','Rango','Pixeles','Porcentaje']], hide_index=True, use_container_width=True)
+    st.dataframe(df_t[['Emoji','Rango','Pixeles','Porcentaje']], hide_index=True, width="stretch")
 
 if mostrar_pna and len(gdf_filtrado) > 0 and entidades_sel:
     st.markdown("---")
@@ -682,7 +681,7 @@ if mostrar_pna and len(gdf_filtrado) > 0 and entidades_sel:
     df_p = gdf_filtrado[['nombre_de_la_unidad','municipio','entidad',
                           'categoria_gerencial','nombre_de_tipologia','clues_imb']].copy()
     df_p.columns = ['Unidad','Municipio','Estado','Categoria','Tipologia','CLUES']
-    st.dataframe(df_p, hide_index=True, use_container_width=True)
+    st.dataframe(df_p, hide_index=True, width="stretch")
 
 st.markdown("---")
 
