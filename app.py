@@ -243,6 +243,9 @@ def cargar_raster_hospital(nombre_archivo):
     data[data == -9999] = np.nan
     data[data >= 1e+30] = np.nan
     data[data <= 0] = np.nan
+    # Convertir segundos a minutos si los valores son muy grandes
+    if np.nanmax(data[~np.isnan(data)]) > 1440:  # más de 24 hrs en minutos = probablemente segundos
+        data = data / 60.0
     return data, bounds
 
 
