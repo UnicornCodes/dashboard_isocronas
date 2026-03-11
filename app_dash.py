@@ -126,7 +126,8 @@ def cargar_raster_hospital(nombre):
     if nombre in _cache: return _cache[nombre]
     ruta = obtener_ruta_archivo(nombre)
     with rasterio.open(ruta) as src:
-        src_crs = src.crs
+        src_crs   = src.crs
+        src_nodata = src.nodata
         necesita_reproyectar = src_crs and src_crs.to_epsg() != 4326
 
         if necesita_reproyectar:
@@ -143,37 +144,39 @@ def cargar_raster_hospital(nombre):
                 dst_transform=transform,
                 dst_crs='EPSG:4326',
                 resampling=Resampling.average,
-                src_nodata=src.nodata,
+                src_nodata=src_nodata,
                 dst_nodata=np.nan,
             )
-            # array_bounds devuelve (west, south, east, north) → convertir a (south, west, north, east)
-            west, south, east, north = rasterio.transform.array_bounds(height, width, transform)
-            bounds = (south, west, north, east)
+            # array_bounds → (left, bottom, right, top) = (west, south, east, north)
+            left, bottom, right, top = array_bounds(height, width, transform)
+            bounds = (bottom, left, top, right)   # folium: (south, west, north, east)
         else:
             data = src.read(1, out_shape=(src.height // 4, src.width // 4),
                             resampling=Resampling.average).astype(float)
             b = src.bounds
             bounds = (b.bottom, b.left, b.top, b.right)
-            if src.nodata is not None:
-                data[data == src.nodata] = np.nan
+            if src_nodata is not None:
+                data[data == src_nodata] = np.nan
 
     data[data == -9999] = np.nan
     data[data >= 1e+30] = np.nan
     data[data <= 0]     = np.nan
 
-    # Convertir segundos → minutos si los valores son claramente segundos
+    # Convertir segundos → minutos
     validos = data[~np.isnan(data)]
     if len(validos) > 0 and np.nanmax(validos) > 1440:
         data = data / 60.0
 
-    # Recortar bounds a territorio de México como sanity check
-    south = max(bounds[0], 14.5)
-    west  = max(bounds[1], -118.5)
-    north = min(bounds[2], 32.8)
-    east  = min(bounds[3], -86.5)
-    bounds = (south, west, north, east)
-
     _cache[nombre] = (data, bounds)
+
+    # Diagnóstico (quitar después)
+    validos2 = data[~np.isnan(data)]
+    print(f"[{nombre}] bounds={bounds}")
+    print(f"[{nombre}] min={np.nanmin(validos2):.1f} max={np.nanmax(validos2):.1f} media={np.nanmean(validos2):.1f} mediana={np.nanmedian(validos2):.1f}")
+    for umbral in [30, 60, 120, 240, 480]:
+        pct = np.sum(validos2 < umbral) / len(validos2) * 100
+        print(f"  < {umbral} min: {pct:.1f}%")
+
     return data, bounds
 
 
